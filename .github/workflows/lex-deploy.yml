@@ -56,4 +56,4 @@ jobs:
 
     - name: deploy
       run: |
-       aws cloudformation deploy --stack-name lex-stack-${{ env.ENVIRONMENT }} --template-file ${{ env.ENVIRONMENT }}-lex.yml  --tags Name=lex-stack-${{ env.ENVIRONMENT }} component=ae-lex-dq  --region us-east-1
+       aws cloudformation deploy --stack-name lex-stack-${{ env.ENVIRONMENT }} --template-file cf/${{ env.ENVIRONMENT }}-lex.yml  --tags Name=lex-stack-${{ env.ENVIRONMENT }} component=ae-lex-dq  --region us-east-1
