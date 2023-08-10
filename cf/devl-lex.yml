@@ -1,29 +1,7 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: Amazon Lex Bot with S3 Integration
+Description: Amazon Lex Bot with Lambda Integration
 
 Resources:
-  LexS3Bucket:
-    Type: "AWS::S3::Bucket"
-    Properties:
-      BucketName: YourLexS3BucketName
-
-  LexS3Data:
-    Type: "AWS::S3::Object"
-    Properties:
-      Bucket: !Ref LexS3Bucket
-      Key: sample-data.json
-      ContentType: application/json
-      Content: >
-        {
-          "orderStatus": {
-            "response": "Your order is on its way. It should arrive within 2 business days."
-          },
-          "productInfo": {
-            "response": "Our product XYZ is a high-quality gadget with advanced features."
-          }
-          // Add more intent data here...
-        }
-
   LexLambdaRole:
     Type: "AWS::IAM::Role"
     Properties:
@@ -59,8 +37,8 @@ Resources:
 
           def lambda_handler(event, context):
               intent_name = event['currentIntent']['name']
-              s3_bucket = 'YourLexS3BucketName'
-              s3_object_key = 'sample-data.json'
+              s3_bucket = 'lexsmapledata'
+              s3_object_key = 'sample.json'
               
               s3 = boto3.client('s3')
               response = s3.get_object(Bucket=s3_bucket, Key=s3_object_key)
@@ -82,41 +60,7 @@ Resources:
                   }
               }
 
-  LexBot:
-    Type: "AWS::Lex::Bot"
-    Properties:
-      Name: CustomerSupportBot
-      Description: A bot for customer support interactions
-      Locale: en-US
-      ChildDirected: false
-      Intents:
-        - IntentName: OrderStatusIntent
-        - IntentName: ProductInfoIntent
-        # Add more intents here...
-
-  OrderStatusIntent:
-    Type: "AWS::Lex::Intent"
-    Properties:
-      Name: OrderStatusIntent
-      SampleUtterances:
-        - "Where is my order?"
-        - "Can you track my package?"
-        - "When will my item arrive?"
-      Slots: []
-      IntentVersion: "$LATEST"
-
-  ProductInfoIntent:
-    Type: "AWS::Lex::Intent"
-    Properties:
-      Name: ProductInfoIntent
-      SampleUtterances:
-        - "Tell me about product XYZ."
-        - "What are the features of XYZ?"
-        - "Give me details about gadget XYZ."
-      Slots: []
-      IntentVersion: "$LATEST"
-
 Outputs:
-  BotName:
-    Description: The name of the Amazon Lex bot.
-    Value: !Ref LexBot
+  LambdaFunctionArn:
+    Description: The ARN of the Lambda function.
+    Value: !GetAtt LexLambdaFunction.Arn
