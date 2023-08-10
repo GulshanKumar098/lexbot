@@ -1,0 +1,59 @@
+
+name: lex Deploy
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'The application deployment environment'
+        default: 'devl'
+        required: true
+        type: choice
+        options:
+         - devl
+         - prod
+
+jobs:
+  Deploy:
+    runs-on: ubuntu-latest
+    #this is for control the deployment via approval method 1
+    # alrerady craeted env with name dev in github setings 
+    #environment: Infra
+
+    
+    steps:
+     
+    - name: Checkout
+      uses: actions/checkout@v2
+      
+#      # For mannual approval method 2 
+#     - uses: trstringer/manual-approval@v1
+#       with:
+#         approvers: gulshan3798
+          
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+       aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+       aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+       aws-region: us-east-1
+
+        
+
+    - name: "Set environment variables for devl environment"
+      if: ${{ github.event.inputs.environment == 'devl' }}
+      run: |
+        echo "ENVIRONMENT=devl" >> $GITHUB_ENV
+        echo "AWS_ACCT=077794698366" >> $GITHUB_ENV
+
+
+    - name: "Set environment variables for prod environment"
+      if: ${{ github.event.inputs.environment == 'prod' }}
+      run: |
+        echo "ENVIRONMENT=prod" >> $GITHUB_ENV
+        echo "AWS_ACCT=188549407646" >> $GITHUB_ENV
+
+
+    - name: deploy
+      run: |
+       aws cloudformation deploy --stack-name lex-stack-${{ env.ENVIRONMENT }} --template-file ${{ env.ENVIRONMENT }}-lex.yml  --tags Name=lex-stack-${{ env.ENVIRONMENT }} component=ae-lex-dq  --region us-east-1

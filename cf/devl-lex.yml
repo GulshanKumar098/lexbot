@@ -1,0 +1,122 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Amazon Lex Bot with S3 Integration
+
+Resources:
+  LexS3Bucket:
+    Type: "AWS::S3::Bucket"
+    Properties:
+      BucketName: YourLexS3BucketName
+
+  LexS3Data:
+    Type: "AWS::S3::Object"
+    Properties:
+      Bucket: !Ref LexS3Bucket
+      Key: sample-data.json
+      ContentType: application/json
+      Content: >
+        {
+          "orderStatus": {
+            "response": "Your order is on its way. It should arrive within 2 business days."
+          },
+          "productInfo": {
+            "response": "Our product XYZ is a high-quality gadget with advanced features."
+          }
+          // Add more intent data here...
+        }
+
+  LexLambdaRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      RoleName: LexLambdaRole
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: "sts:AssumeRole"
+      Policies:
+        - PolicyName: LexLambdaPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "s3:GetObject"
+                Resource: "*"
+
+  LexLambdaFunction:
+    Type: "AWS::Lambda::Function"
+    Properties:
+      FunctionName: LexLambdaFunction
+      Runtime: python3.8
+      Role: !GetAtt LexLambdaRole.Arn
+      Handler: index.lambda_handler
+      Code:
+        ZipFile: |
+          import json
+          import boto3
+
+          def lambda_handler(event, context):
+              intent_name = event['currentIntent']['name']
+              s3_bucket = 'YourLexS3BucketName'
+              s3_object_key = 'sample-data.json'
+              
+              s3 = boto3.client('s3')
+              response = s3.get_object(Bucket=s3_bucket, Key=s3_object_key)
+              data = json.loads(response['Body'].read().decode())
+              
+              if intent_name in data:
+                  bot_response = data[intent_name]['response']
+              else:
+                  bot_response = "I'm sorry, I couldn't find the information you're looking for."
+              
+              return {
+                  'dialogAction': {
+                      'type': 'Close',
+                      'fulfillmentState': 'Fulfilled',
+                      'message': {
+                          'contentType': 'PlainText',
+                          'content': bot_response
+                      }
+                  }
+              }
+
+  LexBot:
+    Type: "AWS::Lex::Bot"
+    Properties:
+      Name: CustomerSupportBot
+      Description: A bot for customer support interactions
+      Locale: en-US
+      ChildDirected: false
+      Intents:
+        - IntentName: OrderStatusIntent
+        - IntentName: ProductInfoIntent
+        # Add more intents here...
+
+  OrderStatusIntent:
+    Type: "AWS::Lex::Intent"
+    Properties:
+      Name: OrderStatusIntent
+      SampleUtterances:
+        - "Where is my order?"
+        - "Can you track my package?"
+        - "When will my item arrive?"
+      Slots: []
+      IntentVersion: "$LATEST"
+
+  ProductInfoIntent:
+    Type: "AWS::Lex::Intent"
+    Properties:
+      Name: ProductInfoIntent
+      SampleUtterances:
+        - "Tell me about product XYZ."
+        - "What are the features of XYZ?"
+        - "Give me details about gadget XYZ."
+      Slots: []
+      IntentVersion: "$LATEST"
+
+Outputs:
+  BotName:
+    Description: The name of the Amazon Lex bot.
+    Value: !Ref LexBot
